@@ -1,0 +1,126 @@
+/*
+ADLSynth VSTi
+Copyright (C) 2021-2026  Datajake
+
+This program is free software; you can redistribute it and/or modify
+it under the terms of the GNU General Public License as published by
+the Free Software Foundation; either version 2 of the License, or
+(at your option) any later version.
+
+This program is distributed in the hope that it will be useful,
+but WITHOUT ANY WARRANTY; without even the implied warranty of
+MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+GNU General Public License for more details.
+
+You should have received a copy of the GNU General Public License along
+with this program; if not, write to the Free Software Foundation, Inc.,
+51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
+*/
+
+#include "ADLSynth.h"
+
+void ADLSynth::initializeSettings (bool resetSynth)
+{
+	lock.acquire();
+	vst_strncpy (ProgramName, "Default", kVstMaxProgNameLen-1);
+	Volume = 1;
+	VolumeDisplay = 0;
+	Transpose = 0;
+	PushMidi = 1;
+	bypassed = false;
+	for (VstInt32 i = 0; i < 16; i++)
+	{
+		ChannelEnabled[i] = true;
+	}
+	FreezeMeters = false;
+	HideParameters = false;
+	if (resetSynth)
+	{
+		suspend ();
+	}
+	lock.release();
+}
+
+void ADLSynth::enableChannel (VstInt32 channel, bool enable)
+{
+	lock.acquire();
+	channel = channel & 0x0f;
+	if (ChannelEnabled[channel] && !enable)
+	{
+		char data[3];
+		data[0] = 0xb0 + (char)channel;
+		data[1] = 0x40;
+		data[2] = 0;
+		sendMidi (data);
+		data[1] = 0x7b;
+		sendMidi (data);
+		data[1] = 0x79;
+		sendMidi (data);
+		data[0] = 0xe0 + (char)channel;
+		data[1] = 0;
+		data[2] = 0x40;
+		sendMidi (data);
+	}
+	ChannelEnabled[channel] = enable;
+	lock.release();
+}
+
+bool ADLSynth::isChannelEnabled (VstInt32 channel)
+{
+	channel = channel & 0x0f;
+	return ChannelEnabled[channel];
+}
+
+void ADLSynth::setFreezeMeters (bool value)
+{
+	lock.acquire();
+	FreezeMeters = value;
+	lock.release();
+}
+
+bool ADLSynth::getFreezeMeters ()
+{
+	return FreezeMeters;
+}
+
+void ADLSynth::setHideParameters (bool value)
+{
+	lock.acquire();
+	HideParameters = value;
+	lock.release();
+}
+
+bool ADLSynth::getHideParameters ()
+{
+	return HideParameters;
+}
+
+void ADLSynth::hardReset ()
+{
+	lock.acquire();
+	clearSynth ();
+	clearBuffer ();
+	initSynth ();
+	initBuffer ();
+	lock.release();
+}
+
+VstInt32 ADLSynth::getActiveVoices ()
+{
+	return synthActiveVoiceCount(&synth);
+}
+
+bool ADLSynth::getBypass ()
+{
+	return bypassed;
+}
+
+HostInfo* ADLSynth::getHostInfo ()
+{
+	return &hi;
+}
+
+double ADLSynth::getCPULoad ()
+{
+	return CPULoad;
+}
