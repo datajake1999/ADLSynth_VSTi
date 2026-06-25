@@ -364,7 +364,7 @@ void ADLSynth::sendMidi (char* data)
 	{
 		if (type == 0x80 || type == 0x90 || type == 0xa0)
 		{
-			if (channel != 9)
+			if (channel != 15)
 			{
 				VstInt32 note = byte2 + (VstInt32)Transpose;
 				if (note > 127)
